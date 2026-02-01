@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Savdo Do'koni - Telegram Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f2f5;
+      color: #333;
+    }
+    header {
+      background: #0088cc;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .products {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 15px;
+      padding: 15px;
+    }
+    .product {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+      transition: transform 0.2s;
+    }
+    .product:hover { transform: scale(1.03); }
+    .product img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+    }
+    .info {
+      padding: 10px;
+    }
+    .price {
+      font-weight: bold;
+      color: #e74c3c;
+      margin: 5px 0;
+    }
+    button {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 10px;
+      width: 100%;
+      cursor: pointer;
+      border-radius: 0 0 12px 12px;
+      font-size: 16px;
+    }
+    button:hover { background: #219653; }
+    #cart {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 15px;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+    }
+    #cart:empty { display: none; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>🛒 Mening Do'konim</h2>
+  </header>
+
+  <div class="products" id="products">
+    <!-- Mahsulotlar JS orqali qo'shiladi -->
+  </div>
+
+  <div id="cart">
+    <span>Savat: <strong id="cart-count">0</strong> ta | Jami: <strong id="total">0 so'm</strong></span>
+    <button onclick="checkout()">Buyurtma berish</button>
+  </div>
+
+  <script>
+    // Telegram WebApp ni ishga tushirish
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.expand(); // To'liq ekran qilish
+
+    // Foydalanuvchi ma'lumotlari (masalan, ism)
+    console.log("Foydalanuvchi:", tg.initDataUnsafe.user);
+
+    // Mahsulotlar ro'yxati (o'zingiz o'zgartiring)
+    const products = [
+      { id: 1, name: "Telefon qopqovi", price: 45000, img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=300" },
+      { id: 2, name: "Simsiz quloqchin", price: 320000, img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300" },
+      { id: 3, name: "Smart soat", price: 850000, img: "https://images.unsplash.com/photo-1517420704952-d9f39e95b43e?w=300" },
+      { id: 4, name: "Powerbank 20000mAh", price: 180000, img: "https://images.unsplash.com/photo-1610797252146-9b7b2e3c7e4f?w=300" },
+    ];
+
+    let cart = [];
+
+    // Mahsulotlarni chizish
+    const container = document.getElementById('products');
+    products.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'product';
+      div.innerHTML = `
+        <img src="${p.img}" alt="${p.name}">
+        <div class="info">
+          <h3>${p.name}</h3>
+          <p class="price">${p.price.toLocaleString()} so'm</p>
+        </div>
+        <button onclick="addToCart(${p.id})">Savatga qo'shish</button>
+      `;
+      container.appendChild(div);
+    });
+
+    function addToCart(id) {
+      const item = products.find(p => p.id === id);
+      cart.push(item);
+      updateCart();
+      tg.showPopup({ title: "Qo'shildi!", message: `${item.name} savatga qo'shildi ✅` });
+    }
+
+    function updateCart() {
+      const count = cart.length;
+      const total = cart.reduce((sum, item) => sum + item.price, 0);
+      document.getElementById('cart-count').textContent = count;
+      document.getElementById('total').textContent = total.toLocaleString() + " so'm";
+      document.getElementById('cart').style.display = count > 0 ? 'flex' : 'none';
+    }
+
+    function checkout() {
+      if (cart.length === 0) return;
+      const message = `Buyurtma:\n${cart.map(i => `• ${i.name} — ${i.price.toLocaleString()} so'm`).join('\n')}\nJami: ${document.getElementById('total').textContent}`;
+      tg.sendData(JSON.stringify({ action: "order", items: cart })); // Backendga yuborish uchun
+      tg.showAlert("Buyurtmangiz qabul qilindi! Tez orada bog'lanamiz.");
+      cart = [];
+      updateCart();
+    }
+
+    // Telegram tugmasini o'zgartirish (Main Button)
+    tg.MainButton.setText("Savatni ko'rish (" + cart.length + ")");
+    tg.MainButton.show();
+    tg.MainButton.onClick(() => {
+      document.getElementById('cart').scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
+
+</body>
+</html>
